@@ -1,9 +1,0 @@
-### HEXMate logfile and output summary ###
-
-### Command-line arguments ###
- C:\Users\alejo\AppData\Local\Temp\xcAsgs0.\driver_tmp_3.o
- -Odist/default/production\Practica1PIC.X.production.hex
- -logfile=dist/default/production\Practica1PIC.X.production.hxl
- -addressing=1
- -break=300000
-

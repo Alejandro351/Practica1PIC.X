@@ -28,3 +28,9 @@
 # Misc
 .svn
 *.bak
+# Archivos generados por MPLAB X
+build/
+dist/
+
+# Configuracion privada de cada computador
+nbproject/private/

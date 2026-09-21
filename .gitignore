@@ -34,3 +34,8 @@ dist/
 
 # Configuracion privada de cada computador
 nbproject/private/
+
+# Archivos internos generados por MPLAB
+nbproject/*.mk
+nbproject/*.bash
+nbproject/Makefile-genesis.properties

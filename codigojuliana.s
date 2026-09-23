@@ -51,4 +51,60 @@ BCD:
     GOTO BCD
 
 Fin_BCD:
+    
+Tabla_7Seg:
+
+    MOVWF Indice, a
+
+    MOVF Indice, W, a
+    XORLW 0
+    BTFSC STATUS, 2, a
+    RETLW 0x3F
+
+    MOVF Indice, W, a
+    XORLW 1
+    BTFSC STATUS, 2, a
+    RETLW 0x06
+
+    MOVF Indice, W, a
+    XORLW 2
+    BTFSC STATUS, 2, a
+    RETLW 0x5B
+
+    MOVF Indice, W, a
+    XORLW 3
+    BTFSC STATUS, 2, a
+    RETLW 0x4F
+
+    MOVF Indice, W, a
+    XORLW 4
+    BTFSC STATUS, 2, a
+    RETLW 0x66
+
+    MOVF Indice, W, a
+    XORLW 5
+    BTFSC STATUS, 2, a
+    RETLW 0x6D
+
+    MOVF Indice, W, a
+    XORLW 6
+    BTFSC STATUS, 2, a
+    RETLW 0x7D
+
+    MOVF Indice	, a
+    XORLW 7
+    BTFSC STATUS, 2, a
+    RETLW 0x07
+
+    MOVF Indice, W, a
+    XORLW 8
+    BTFSC STATUS, 2, a
+    RETLW 0x7F
+
+    MOVF Indice, W, a
+    XORLW 9
+    BTFSC STATUS, 2, a
+    RETLW 0x6F
+
+    RETLW 0x00
 

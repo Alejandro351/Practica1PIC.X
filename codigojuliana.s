@@ -38,6 +38,13 @@ Separar_Digitos:
 
 
 BCD:
+    
+    MOVLM 10
+    SUBWF Unidades, W,c
+    
+    BTFSS STATUS, 0, c
+    GOTO Fin_BCD
+    
     MOVWF Unidades, c
     INCF Decenas, F, c
 

@@ -3,7 +3,10 @@
 GLOBAL ADC_Init
 
 PSECT adc_code, class=CODE, reloc=2
+PSECT udata_acs
 
+ADC_H: DS 1
+ADC_L: DS 1
 
 ADC_Init:
 
@@ -32,6 +35,29 @@ ADC_Init:
     RETURN
 
 
+
+   Leer_ADC:
+
+    ; Iniciar conversion
+    BSF ADCON0, 1, c
+
+
+Esperar_ADC:
+
+    ; Esperar mientras la conversion esta activa
+    BTFSC ADCON0, 1, c
+    GOTO Esperar_ADC
+
+
+    ; Guardar parte alta del resultado
+    MOVF ADRESH, W, c
+    MOVWF ADC_H, c
+
+    ; Guardar parte baja del resultado
+    MOVF ADRESL, W, c
+    MOVWF ADC_L, c
+
+    RETURN
+
+
 END
-
-

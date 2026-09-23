@@ -118,13 +118,13 @@ Preparar_Display:
     GOTO Mostrar_F
 
     ; Mostrar celsius
-    MOVF TempC, W,c
+    MOVF TempC, W, c
     GOTO Guardar_Valor
 
 Mostrar_F:
 
     ; Mostrar Fahrenheit
-    MOVF TempF, w, c
+    MOVF TempF, W, c
 
 
 Guardar_Valor:
@@ -152,7 +152,7 @@ BCD:
   
 Fin_BCD:
     
-        ; Obtener segmentos para decenas
+    ; Obtener segmentos para decenas
     MOVF Decenas, W, c
     CALL Tabla_7Seg
     MOVWF SegDec, c
@@ -198,3 +198,25 @@ Mostrar_Unidades:
     BSF LATC, 2, c
 
     RETURN
+    
+Revisar_Timer0:
+
+    ; Revisar bandera de Timer0
+    BTFSS INTCON, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
+
+    ; Limpiar bandera de Timer0
+    BCF INTCON, 2, c
+
+    ; Multiplexar displays
+    CALL Multiplexar
+
+    ; Contar tiempo para nueva muestra
+    DECFSZ ContMuestra, c
+
+    ; Reiniciar contador
+    MOVLW 100
+    MOVWF ContMuestra, c
+

@@ -65,11 +65,26 @@ ISR:
     BTFSS INTCON, 1, c
     GOTO Revisar_INT1
 
-    ; Cambiar estado alarma manual
-    BTG AlarmaManual, 0, c
+    ; Revisar estado actual del LED
+    BTFSC LATC, 0, c
+    GOTO Apagar_LED_Manual
 
-    ; Actualizar LED
-    CALL Actualizar_LED
+    ; Encender LED manualmente
+    BSF LATC, 0, c
+    BSF AlarmaManual, 0, c
+    GOTO Fin_INT0
+
+
+Apagar_LED_Manual:
+
+    ; Apagar LED
+    BCF LATC, 0, c
+
+    ; Quitar estado manual
+    BCF AlarmaManual, 0, c
+
+
+Fin_INT0:
 
     ; Limpiar bandera
     BCF INTCON, 1, c

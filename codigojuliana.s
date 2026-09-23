@@ -38,4 +38,10 @@ Separar_Digitos:
 
 
 BCD:
+    MOVWF Unidades, c
+    INCF Decenas, F, c
+
+    GOTO BCD
+
+Fin_BCD:
 

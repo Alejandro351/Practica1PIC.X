@@ -192,5 +192,15 @@ Revisar_Timer0:
 
     MOVLW 0x06
     MOVWF TMR0L, c   
+    
+    ; Limpiar bandera
+    BCF INTCON, 2, c
+
+    ; Contar interrupciones
+    DECFSZ ContMuestra, F, c
+    GOTO Fin_ISR
+    
+    
+
 
 END

@@ -110,28 +110,42 @@ Tabla_7Seg:
 
 Preparar_Display:
     
-
     ; Ya se va a actualizar el display
-    BCF Actualizar, c
+    BCF Actualizar, 0, c
 
     ; Revisar si se muestra celsius o fahrenheit
     BTFSC UnidadF, 0, c
     GOTO Mostrar_F
 
     ; Mostrar celsius
-    MOVF TempC, W
+    MOVF TempC, W,c
     GOTO Guardar_Valor
 
 Mostrar_F:
 
     ; Mostrar Fahrenheit
-    MOVF TempF, c
+    MOVF TempF, w, c
 
 
 Guardar_Valor:
 
     MOVWF Valor, c
-
     
+    ; Separar decenas y unidades
+    CLRF Decenas, c
+
+    MOVF Valor, W, c
+    MOVWF Unidades, c
+
+BCD:
+
+    SUBWF Unidades, W, c
+
+    BTFSS STATUS, 0, c
+    GOTO Fin_BCD
+
+    INCF Decenas, F, c
+
+    GOTO BCD
   
 

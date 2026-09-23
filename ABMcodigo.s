@@ -148,7 +148,8 @@ Fin_Division:
     ADDWF TempF, F, c
 
     RETURN
-
+    
+    ;Configuracion del Timer
 ; Configurar Timer0
 MOVLW 00000011B
 MOVWF T0CON, c
@@ -159,4 +160,14 @@ MOVWF TMR0H, c
 
 MOVLW 0x06
 MOVWF TMR0L, c
+    
+; Contador para nueva lectura
+MOVLW 250
+MOVWF ContMuestra, c
+
+; Limpiar solicitud ADC
+BCF PedirADC, 0, c
+    
+    
+    
 END

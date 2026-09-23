@@ -228,7 +228,7 @@ Separar_Digitos:
     MOVWF Unidades, c
 
 BCD:
-    MOVLM 10
+    MOVLW 10
     SUBWF Unidades, W, c
     
     BTFSS STATUS, 0, c
@@ -240,6 +240,7 @@ BCD:
     GOTO BCD
 
 Fin_BCD:
+    RETURN
     
 
 Tabla_7Seg:

@@ -8,6 +8,9 @@ PSECT udata_acs
 ADC_H: DS 1
 ADC_L: DS 1 
 TempC: DS 1
+TempF: DS 1
+Temp4: DS 1
+
 
 ADC_Init:
 
@@ -74,16 +77,62 @@ Esperar_ADC:
     ; Limitar la temperatura a 99
     MOVLW 100
     SUBWF TempC, W, c
-
+    ; Si es menor de 100, dejar el valor
     BTFSS STATUS, 0, c
     GOTO Fin_Celsius
-
+    ; Si es 100 o mayor, dejarlo en 99
     MOVLW 99
     MOVWF TempC, c
 
 
-Fin_Celsius:
-
     RETURN
+    
+    Calcular_Fahrenheit:
+
+    ; Si Celsius es 38 o mayor, Fahrenheit supera 99
+    MOVLW 38
+    SUBWF TempC, W, c
+    BTFSS STATUS, 0, c
+    GOTO Hacer_Fahrenheit
+
+    ; Limitar Fahrenheit a 99
+    MOVLW 99
+    MOVWF TempF, c
+    RETURN
+    
+    
+Hacer_Fahrenheit:
+
+    ; Temp4 = TempC por 2
+    MOVF TempC, W, c
+    ADDWF TempC, W, c
+    MOVWF Temp4, c
+
+    ; Temp4 = TempC por 4
+    MOVF Temp4, W, c
+    ADDWF Temp4, W, c
+    MOVWF Resto, c
+
+    ; Cociente empieza en cero
+    CLRF Cociente, c
+    
+Dividir_5:
+
+    ; Intentar restar 5
+    MOVLW 5
+    SUBWF Resto, W, c
+
+    ; Si el resultado seria negativo termina
+    BTFSS STATUS, 0, c
+    GOTO Fin_Division
+
+    ; Guardar la resta
+    MOVWF Resto, c
+
+    ; Aumentar cociente
+    INCF Cociente, F, c
+
+    GOTO Dividir_5
+
 
 END

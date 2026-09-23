@@ -86,7 +86,7 @@ Esperar_ADC:
     MOVLW 99
     MOVWF TempC, c
 
-
+Fin_Celsius:
     RETURN
     
     Calcular_Fahrenheit:
@@ -135,6 +135,7 @@ Dividir_5:
     INCF Cociente, F, c
 
     GOTO Dividir_5
+Fin_Division:
     
     ; TempF = TempC + Cociente
     MOVF TempC, W, c

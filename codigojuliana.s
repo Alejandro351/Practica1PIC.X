@@ -202,10 +202,12 @@ Mostrar_Unidades:
 Revisar_Timer0:
 
     ; Revisar bandera de Timer0
-    BTFSS INTCON, c
+    BTFSS INTCON, 2, c
     GOTO Fin_ISR
 
     ;Recargar timer0
+    MOVLW 0xFF
+    MOVWF TMR0H, c
     MOVLW 0x06
     MOVWF TMR0L, c
 
@@ -216,10 +218,11 @@ Revisar_Timer0:
     CALL Multiplexar
 
     ; Contar tiempo para nueva muestra
-    DECFSZ ContMuestra, c
-
+    DECFSZ ContMuestra, F, c
+    GOTO Fin_ISR
+    
     ; Reiniciar contador
-    MOVLW 100
+    MOVLW 250
     MOVWF ContMuestra, c
 
     ; Pedir una nueva lectura

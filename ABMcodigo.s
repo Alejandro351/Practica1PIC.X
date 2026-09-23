@@ -10,6 +10,8 @@ ADC_L: DS 1
 TempC: DS 1
 TempF: DS 1
 Temp4: DS 1
+Resto: DS 1
+Cociente: DS 1
 
 
 ADC_Init:
@@ -133,6 +135,17 @@ Dividir_5:
     INCF Cociente, F, c
 
     GOTO Dividir_5
+    
+    ; TempF = TempC + Cociente
+    MOVF TempC, W, c
+    ADDWF Cociente, W, c
+    MOVWF TempF, c
+
+    ; Sumar 32
+    MOVLW 32
+    ADDWF TempF, F, c
+
+    RETURN
 
 
 END

@@ -108,3 +108,16 @@ Tabla_7Seg:
 
     RETLW 0x00
 
+    Preparar_Display:
+
+    ; Ya se va a actualizar el display
+    BCF Actualizar, c
+
+    ; Revisar si se muestra celsius o fahrenheit
+    BTFSC UnidadF, 0, c
+    GOTO Mostrar_F
+
+    ; Mostrar celsius
+    MOVF TempC, W
+    GOTO Guardar_Valor
+

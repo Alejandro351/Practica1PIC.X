@@ -108,7 +108,8 @@ Tabla_7Seg:
 
     RETLW 0x00
 
-    Preparar_Display:
+Preparar_Display:
+    
 
     ; Ya se va a actualizar el display
     BCF Actualizar, c
@@ -120,4 +121,17 @@ Tabla_7Seg:
     ; Mostrar celsius
     MOVF TempC, W
     GOTO Guardar_Valor
+
+Mostrar_F:
+
+    ; Mostrar Fahrenheit
+    MOVF TempF, c
+
+
+Guardar_Valor:
+
+    MOVWF Valor, c
+
+    
+  
 

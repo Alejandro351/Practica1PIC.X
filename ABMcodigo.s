@@ -169,5 +169,12 @@ MOVWF ContMuestra, c
 BCF PedirADC, 0, c
     
     
-    
+; Limpiar bandera Timer0
+BCF INTCON, 2, c
+
+; Habilitar interrupcion Timer0
+BSF INTCON, 5, c
+
+; Encender Timer0
+BSF T0CON
 END

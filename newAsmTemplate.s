@@ -8,27 +8,31 @@ CONFIG PBADEN = OFF
 CONFIG MCLRE  = ON
 CONFIG XINST  = OFF
 
-; Variables 
+; Variables
 PSECT udata_acs
 
-UnidadF:       DS 1
-Actualizar:    DS 1
-Digito:        DS 1
-Valor:         DS 1
-Decenas:       DS 1
-Unidades:      DS 1
-SegDec:        DS 1
-SegUni:        DS 1
-Indice:        DS 1
-ADC_H:         DS 1
-ADC_L:         DS 1 
-TempC:         DS 1
-TempF:         DS 1
-Temp4:         DS 1
-Resto:         DS 1
-Cociente:      DS 1
-ContMuestra:   DS 1
-PedirADC:      DS 1
+UnidadF:        DS 1
+Actualizar:     DS 1
+Digito:         DS 1
+Valor:          DS 1
+Decenas:        DS 1
+Unidades:       DS 1
+SegDec:         DS 1
+SegUni:         DS 1
+Indice:         DS 1
+
+ADC_H:          DS 1
+ADC_L:          DS 1
+TempC:          DS 1
+TempF:          DS 1
+Temp4:          DS 1
+Resto:          DS 1
+Cociente:       DS 1
+ContMuestra:    DS 1
+PedirADC:       DS 1
+
+VentAuto:       DS 1
+AlarmaManual:   DS 1
 
 
 ; Vector Reset
@@ -41,33 +45,43 @@ PSECT intVec, class=CODE, reloc=2
 ORG 0x0008
 GOTO ISR
 
+
 ; Codigo Principal
 PSECT main_code, class=CODE, reloc=2
 
+
 ; Interrupciones externas
 ISR:
+
     ; Revisar INT0
     BTFSS INTCON, 1, c
     GOTO Revisar_INT1
-    
-    ; Cambiar estado del LED
-    BTG LATC, 0, c
-    
+
+    ; Cambiar estado de alarma manual
+    BTG AlarmaManual, 0, c
+
+    ; Actualizar LED
+    CALL Actualizar_LED
+
     ; Limpiar bandera
     BCF INTCON, 1, c
 
+
 Revisar_INT1:
+
     ; Revisar INT1
     BTFSS INTCON3, 0, c
     GOTO Revisar_INT2
-    
+
     ; Cambiar estado del ventilador
     BTG LATC, 1, c
-    
+
     ; Limpiar bandera
     BCF INTCON3, 0, c
 
+
 Revisar_INT2:
+
     ; Revisar INT2
     BTFSS INTCON3, 1, c
     GOTO Revisar_Timer0
@@ -95,16 +109,16 @@ Revisar_Timer0:
     MOVLW 0x06
     MOVWF TMR0L, c
 
-    ; Limpiar bandera 
+    ; Limpiar bandera
     BCF INTCON, 2, c
 
     ; Llamado de multiplexacion
     CALL Multiplexar
 
-    ;Tiempo para nueva muestra
+    ; Tiempo para nueva muestra
     DECFSZ ContMuestra, F, c
     GOTO Fin_ISR
-    
+
     ; Reiniciar contador
     MOVLW 250
     MOVWF ContMuestra, c
@@ -114,11 +128,14 @@ Revisar_Timer0:
 
 
 Fin_ISR:
+
     RETFIE 1
-    
+
+
 ; Config Inicial
 
 Inicio:
+
     ; Trabajar sin prioridades
     BCF RCON, 7, c
 
@@ -126,12 +143,28 @@ Inicio:
     MOVLW 01110010B
     MOVWF OSCCON, c
 
-    ; LED y ventilador apagados
+    ; Limpiar salidas
+    CLRF LATA, c
     CLRF LATC, c
+    CLRF LATD, c
 
     ; Iniciar en Celsius
     CLRF UnidadF, c
     CLRF Actualizar, c
+
+    ; Estados iniciales
+    CLRF VentAuto, c
+    CLRF AlarmaManual, c
+    CLRF PedirADC, c
+    CLRF Digito, c
+    CLRF Decenas, c
+    CLRF Unidades, c
+
+    ; RA0/AN0 como entrada
+    BSF TRISA, 0, c
+
+    ; RA1 display de decenas
+    BCF TRISA, 1, c
 
     ; Botones como entradas
     BSF TRISB, 0, c
@@ -142,11 +175,57 @@ Inicio:
     BCF TRISC, 0, c
     BCF TRISC, 1, c
 
-    ; Config ADC
-    CALL ADC_Init
+    ; RC2 display de unidades
+    BCF TRISC, 2, c
 
-    ; Config displays
-    CALL ConfigurarDisplays
+    ; RD0-RD6 segmentos a-g
+    MOVLW 10000000B
+    MOVWF TRISD, c
+
+    ; Comparadores apagados
+    MOVLW 00000111B
+    MOVWF CMCON, c
+
+
+    ; Config ADC
+
+    ; AN0 analogico y los demas digitales
+    MOVLW 00001110B
+    MOVWF ADCON1, c
+
+    ; Resultado justificado a la izquierda
+    ; Tiempo de adquisicion 4 TAD
+    ; Reloj ADC Fosc/32
+    MOVLW 00010010B
+    MOVWF ADCON2, c
+
+    ; Seleccionar AN0 y encender ADC
+    MOVLW 00000001B
+    MOVWF ADCON0, c
+
+
+    ; Valores iniciales de los displays
+    MOVLW 0x3F
+    MOVWF SegDec, c
+    MOVWF SegUni, c
+
+
+    ; Config Timer0
+
+    MOVLW 00000011B
+    MOVWF T0CON, c
+
+    ; Valor inicial Timer0
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
+
+    ; Contador para nueva lectura
+    MOVLW 250
+    MOVWF ContMuestra, c
+
 
     ; Limpiar banderas y permisos
     CLRF INTCON, c
@@ -165,10 +244,13 @@ Inicio:
     ; Habilitar INT2
     BSF INTCON3, 4, c
 
-    ; Configurar Timer0
-    CALL Timer0_Init
+    ; Habilitar interrupcion Timer0
+    BSF INTCON, 5, c
 
-    ; Primera lectura ADC
+    ; Encender Timer0
+    BSF T0CON, 7, c
+
+    ; Pedir primera lectura
     BSF PedirADC, 0, c
 
     ; Habilitar interrupciones globales
@@ -176,6 +258,7 @@ Inicio:
 
 
 ; --- BUCLE PRINCIPAL
+
 Principal:
 
     ; Revisar si se necesita una nueva lectura
@@ -187,30 +270,9 @@ Principal:
     CALL Preparar_Display
 
     GOTO Principal
-    
+
 
 ; --- ADC
-GLOBAL ADC_Init
-PSECT adc_code, class=CODE, reloc=2
-
-ADC_Init:
-
-    ; RA0/AN0 como entrada
-    BSF TRISA, 0, c
-
-    ; AN0 analogico es
-    MOVLW 00001110B
-    MOVWF ADCON1, c
-
-    ; Reloj ADC 
-    MOVLW 00010010B
-    MOVWF ADCON2, c
-
-    ; Encender ADC
-    MOVLW 00000001B
-    MOVWF ADCON0, c
-
-    RETURN
 
 Leer_ADC:
 
@@ -220,9 +282,10 @@ Leer_ADC:
     ; Iniciar conversion
     BSF ADCON0, 1, c
 
+
 Esperar_ADC:
+
     ; Esperar mientras la conversion esta activa
-    ; Tiempo Espera conversion
     BTFSC ADCON0, 1, c
     GOTO Esperar_ADC
 
@@ -234,8 +297,13 @@ Esperar_ADC:
     MOVF ADRESL, W, c
     MOVWF ADC_L, c
 
-    ; Calcular temperaturas
+    ; Calcular Celsius
     CALL Calcular_Celsius
+
+    ; Revisar umbral de temperatura
+    CALL Control_Temperatura
+
+    ; Calcular Fahrenheit
     CALL Calcular_Fahrenheit
 
     ; Actualizar display
@@ -243,7 +311,9 @@ Esperar_ADC:
 
     RETURN
 
+
 Calcular_Celsius:
+
     ; Parte alta del ADC por 2
     MOVF ADC_H, W, c
     ADDWF ADC_H, W, c
@@ -263,7 +333,9 @@ Calcular_Celsius:
     MOVLW 99
     MOVWF TempC, c
 
+
 Fin_Celsius:
+
     RETURN
 
 
@@ -272,15 +344,17 @@ Calcular_Fahrenheit:
     ; Si Celsius es 38 o mayor, Fahrenheit supera 99
     MOVLW 38
     SUBWF TempC, W, c
+
     BTFSS STATUS, 0, c
     GOTO Hacer_Fahrenheit
 
     ; Limitar Fahrenheit a 99
     MOVLW 99
     MOVWF TempF, c
+
     RETURN
-    
-    
+
+
 Hacer_Fahrenheit:
 
     ; Temp4 = TempC por 2
@@ -288,14 +362,15 @@ Hacer_Fahrenheit:
     ADDWF TempC, W, c
     MOVWF Temp4, c
 
-    ; Temp4 = TempC por 4
+    ; Resto = TempC por 4
     MOVF Temp4, W, c
     ADDWF Temp4, W, c
     MOVWF Resto, c
 
     ; Cociente empieza en cero
     CLRF Cociente, c
-    
+
+
 Dividir_5:
 
     ; Intentar restar 5
@@ -314,8 +389,9 @@ Dividir_5:
 
     GOTO Dividir_5
 
+
 Fin_Division:
-    
+
     ; TempF = TempC + Cociente
     MOVF TempC, W, c
     ADDWF Cociente, W, c
@@ -326,66 +402,76 @@ Fin_Division:
     ADDWF TempF, F, c
 
     RETURN
-    
 
-Timer0_Init:
 
-    ; Configurar Timer0
-    MOVLW 00000011B
-    MOVWF T0CON, c
+; --- Control automatico
 
-    ; Cargar valor inicial
-    MOVLW 0xFF
-    MOVWF TMR0H, c
+Control_Temperatura:
 
-    MOVLW 0x06
-    MOVWF TMR0L, c
-    
-    ; Contador para nueva lectura
-    MOVLW 250
-    MOVWF ContMuestra, c
+    ; Revisar si TempC es 25 o mayor
+    MOVLW 25
+    SUBWF TempC, W, c
 
-    ; Limpiar solicitud ADC
-    BCF PedirADC, 0, c
+    BTFSS STATUS, 0, c
+    GOTO Temperatura_Baja
 
-    ; Limpiar bandera Timer0
-    BCF INTCON, 2, c
 
-    ; Habilitar interrupcion Timer0
-    BSF INTCON, 5, c
+    ; Activacion automatica
+    BSF VentAuto, 0, c
 
-    ; Encender Timer0
-    BSF T0CON, 7, c
+    ; Encender ventilador
+    BSF LATC, 1, c
+
+    ; Actualizar LED
+    CALL Actualizar_LED
 
     RETURN
 
 
-; --- Visualizacion
+Temperatura_Baja:
 
-ConfigurarDisplays:
+    ; Revisar si el ventilador estaba en automatico
+    BTFSS VentAuto, 0, c
+    GOTO Revisar_LED
 
-    ; RA1 display de decenas
-    BCF TRISA, 1, c
+    ; Apagar ventilador automatico
+    BCF LATC, 1, c
 
-    ; RC2 display de unidades
-    BCF TRISC, 2, c
+    ; Quitar estado automatico
+    BCF VentAuto, 0, c
 
-    ; RD0-RD6 segmentos a-g
-    MOVLW 10000000B
-    MOVWF TRISD, c
 
-    ; Apagar displays inicialmente
-    BCF LATA, 1, c
-    BCF LATC, 2, c
+Revisar_LED:
 
-    CLRF Digito, c
-    CLRF Decenas, c
-    CLRF Unidades, c
+    CALL Actualizar_LED
+
+    RETURN
+
+
+Actualizar_LED:
+
+    ; Si hay alarma por temperatura mantener LED encendido
+    BTFSC VentAuto, 0, c
+    GOTO Encender_LED
+
+    ; Revisar alarma manual
+    BTFSC AlarmaManual, 0, c
+    GOTO Encender_LED
+
+    ; Si no hay ninguna alarma apagar LED
+    BCF LATC, 0, c
+    RETURN
+
+
+Encender_LED:
+
+    BSF LATC, 0, c
 
     RETURN
 
 
 ; --- Separar unidades y decenas
+
 Separar_Digitos:
 
     CLRF Decenas, c
@@ -393,23 +479,28 @@ Separar_Digitos:
     MOVF Valor, W, c
     MOVWF Unidades, c
 
+
 BCD:
+
     MOVLW 10
     SUBWF Unidades, W, c
-    
+
     BTFSS STATUS, 0, c
     GOTO Fin_BCD
-    
+
     MOVWF Unidades, c
     INCF Decenas, F, c
 
     GOTO BCD
 
+
 Fin_BCD:
+
     RETURN
-    
+
 
 Tabla_7Seg:
+
     MOVWF Indice, c
 
     MOVF Indice, W, c
@@ -466,17 +557,18 @@ Tabla_7Seg:
 
 
 Preparar_Display:
-    
+
     ; Actualizar el display
     BCF Actualizar, 0, c
 
-    ; Revisar si esta en celsius o farenheit
+    ; Revisar si esta en Celsius o Fahrenheit
     BTFSC UnidadF, 0, c
     GOTO Mostrar_F
 
-    ; Mostrar celsius
+    ; Mostrar Celsius
     MOVF TempC, W, c
     GOTO Guardar_Valor
+
 
 Mostrar_F:
 
@@ -502,7 +594,7 @@ Guardar_Valor:
     MOVWF SegUni, c
 
     RETURN
-    
+
 
 Multiplexar:
 
@@ -516,6 +608,7 @@ Multiplexar:
     BTFSC Digito, 0, c
     GOTO Mostrar_Unidades
 
+
 Mostrar_Decenas:
 
     ; Cargar segmentos de decenas
@@ -524,7 +617,7 @@ Mostrar_Decenas:
 
     ; Encender display de decenas
     BSF LATA, 1, c
-    
+
     RETURN
 
 

@@ -123,7 +123,7 @@ Preparar_Display:
 
 Mostrar_F:
 
-    ; Mostrar Fahrenheit
+    ; Mostrar fahrenheit
     MOVF TempF, W, c
 
 
@@ -132,36 +132,18 @@ Guardar_Valor:
     MOVWF Valor, c
     
     ; Separar decenas y unidades
-    CLRF Decenas, c
+    CALL Separar_Digitos
 
-    MOVF Valor, W, c
-    MOVWF Unidades, c
-
-BCD:
-
-    MOVLW 10
-    SUBWF Unidades, W, c
-
-    BTFSS STATUS, 0, c
-    GOTO Fin_BCD
-
-    MOVWF Unidades, c
-    INCF Decenas, F, c
-
-    GOTO BCD
-  
-Fin_BCD:
-    
-    ; Obtener segmentos para decenas
+    ;obt segmento para decenas
     MOVF Decenas, W, c
     CALL Tabla_7Seg
     MOVWF SegDec, c
-
-    ; Obtener segmentos para unidades
+    
+    ;obt segmentos para unidades 
     MOVF Unidades, W, c
     CALL Tabla_7Seg
     MOVWF SegUni, c
-
+    
     RETURN
     
 Multiplexar:

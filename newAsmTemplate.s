@@ -11,7 +11,8 @@ CONFIG XINST  = OFF
 ; Variables 
 PSECT udata_acs
 
-UnidadF:       DS 1	
+UnidadF:       DS 1
+Actualizar:    DS 1
 Digito:        DS 1
 Valor:         DS 1
 Decenas:       DS 1
@@ -22,6 +23,12 @@ Indice:        DS 1
 ADC_H:         DS 1
 ADC_L:         DS 1 
 TempC:         DS 1
+TempF:         DS 1
+Temp4:         DS 1
+Resto:         DS 1
+Cociente:      DS 1
+ContMuestra:   DS 1
+PedirADC:      DS 1
 
 
 ; Vector Reset
@@ -189,10 +196,98 @@ Calcular_Celsius:
     MOVLW 99
     MOVWF TempC, c
 
-
 Fin_Celsius:
+    RETURN
+
+
+Calcular_Fahrenheit:
+
+    ; Si Celsius es 38 o mayor, Fahrenheit supera 99
+    MOVLW 38
+    SUBWF TempC, W, c
+    BTFSS STATUS, 0, c
+    GOTO Hacer_Fahrenheit
+
+    ; Limitar Fahrenheit a 99
+    MOVLW 99
+    MOVWF TempF, c
+    RETURN
+    
+    
+Hacer_Fahrenheit:
+
+    ; Temp4 = TempC por 2
+    MOVF TempC, W, c
+    ADDWF TempC, W, c
+    MOVWF Temp4, c
+
+    ; Temp4 = TempC por 4
+    MOVF Temp4, W, c
+    ADDWF Temp4, W, c
+    MOVWF Resto, c
+
+    ; Cociente empieza en cero
+    CLRF Cociente, c
+    
+Dividir_5:
+
+    ; Intentar restar 5
+    MOVLW 5
+    SUBWF Resto, W, c
+
+    ; Si el resultado seria negativo termina
+    BTFSS STATUS, 0, c
+    GOTO Fin_Division
+
+    ; Guardar la resta
+    MOVWF Resto, c
+
+    ; Aumentar cociente
+    INCF Cociente, F, c
+
+    GOTO Dividir_5
+
+Fin_Division:
+    
+    ; TempF = TempC + Cociente
+    MOVF TempC, W, c
+    ADDWF Cociente, W, c
+    MOVWF TempF, c
+
+    ; Sumar 32
+    MOVLW 32
+    ADDWF TempF, F, c
 
     RETURN
+    
+
+    ;Configuracion del Timer
+; Configurar Timer0
+MOVLW 00000011B
+MOVWF T0CON, c
+
+; Cargar valor inicial
+MOVLW 0xFF
+MOVWF TMR0H, c
+
+MOVLW 0x06
+MOVWF TMR0L, c
+    
+; Contador para nueva lectura
+MOVLW 250
+MOVWF ContMuestra, c
+
+; Limpiar solicitud ADC
+BCF PedirADC, 0, c
+
+; Limpiar bandera Timer0
+BCF INTCON, 2, c
+
+; Habilitar interrupcion Timer0
+BSF INTCON, 5, c
+
+; Encender Timer0
+BSF T0CON, 7, c
 
 
 ; --- Visualizacion
@@ -297,6 +392,131 @@ Tabla_7Seg:
     RETLW 0x6F
 
     RETLW 0x00
+
+
+Preparar_Display:
+    
+    ; Ya se va a actualizar el display
+    BCF Actualizar, 0, c
+
+    ; Revisar si se muestra celsius o fahrenheit
+    BTFSC UnidadF, 0, c
+    GOTO Mostrar_F
+
+    ; Mostrar celsius
+    MOVF TempC, W, c
+    GOTO Guardar_Valor
+
+Mostrar_F:
+
+    ; Mostrar Fahrenheit
+    MOVF TempF, W, c
+
+
+Guardar_Valor:
+
+    MOVWF Valor, c
+    
+    ; Separar decenas y unidades
+    CLRF Decenas, c
+
+    MOVF Valor, W, c
+    MOVWF Unidades, c
+
+BCD_Display:
+
+    MOVLW 10
+    SUBWF Unidades, W, c
+
+    BTFSS STATUS, 0, c
+    GOTO Fin_BCD_Display
+
+    MOVWF Unidades, c
+    INCF Decenas, F, c
+
+    GOTO BCD_Display
+  
+Fin_BCD_Display:
+    
+    ; Obtener segmentos para decenas
+    MOVF Decenas, W, c
+    CALL Tabla_7Seg
+    MOVWF SegDec, c
+
+    ; Obtener segmentos para unidades
+    MOVF Unidades, W, c
+    CALL Tabla_7Seg
+    MOVWF SegUni, c
+
+    RETURN
+    
+
+Multiplexar:
+
+    ; Apagar ambos displays
+    BCF LATA, 1, c
+    BCF LATC, 2, c
+
+    ; Cambiar de display
+    BTG Digito, 0, c
+
+    BTFSC Digito, 0, c
+    GOTO Mostrar_Unidades
+
+
+Mostrar_Decenas:
+
+    ; Cargar segmentos de decenas
+    MOVF SegDec, W, c
+    MOVWF LATD, c
+
+    ; Encender display de decenas
+    BSF LATA, 1, c
+    
+    RETURN
+
+
+Mostrar_Unidades:
+
+    ; Cargar segmentos de unidades
+    MOVF SegUni, W, c
+    MOVWF LATD, c
+
+    ; Encender display de unidades
+    BSF LATC, 2, c
+
+    RETURN
+    
+
+Revisar_Timer0:
+
+    ; Revisar bandera de Timer0
+    BTFSS INTCON, 2, c
+    GOTO Fin_ISR
+
+    ;Recargar timer0
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
+
+    ; Limpiar bandera de Timer0
+    BCF INTCON, 2, c
+
+    ; Multiplexar displays
+    CALL Multiplexar
+
+    ; Contar tiempo para nueva muestra
+    DECFSZ ContMuestra, F, c
+    GOTO Fin_ISR
+    
+    ; Reiniciar contador
+    MOVLW 250
+    MOVWF ContMuestra, c
+
+    ; Pedir una nueva lectura
+    BSF PedirADC, 0, c
 
 
 END

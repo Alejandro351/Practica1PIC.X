@@ -70,18 +70,52 @@ Revisar_INT1:
 Revisar_INT2:
     ; Revisar INT2
     BTFSS INTCON3, 1, c
-    GOTO Fin_ISR
+    GOTO Revisar_Timer0
 
     ; Cambiar entre Celsius y Fahrenheit
     BTG UnidadF, 0, c
 
+    ; Actualizar lo que se muestra
+    BSF Actualizar, 0, c
+
     ; Limpiar bandera
     BCF INTCON3, 1, c
+
+
+Revisar_Timer0:
+
+    ; Revisar bandera de Timer0
+    BTFSS INTCON, 2, c
+    GOTO Fin_ISR
+
+    ; Recargar Timer0
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
+
+    ; Limpiar bandera 
+    BCF INTCON, 2, c
+
+    ; Llamado de multiplexacion
+    CALL Multiplexar
+
+    ;Tiempo para nueva muestra
+    DECFSZ ContMuestra, F, c
+    GOTO Fin_ISR
+    
+    ; Reiniciar contador
+    MOVLW 250
+    MOVWF ContMuestra, c
+
+    ; Pedir una nueva lectura
+    BSF PedirADC, 0, c
+
 
 Fin_ISR:
     RETFIE 1
     
-
 ; Config Inicial
 
 Inicio:
@@ -97,6 +131,7 @@ Inicio:
 
     ; Iniciar en Celsius
     CLRF UnidadF, c
+    CLRF Actualizar, c
 
     ; Botones como entradas
     BSF TRISB, 0, c
@@ -106,6 +141,12 @@ Inicio:
     ; LED y ventilador como salidas
     BCF TRISC, 0, c
     BCF TRISC, 1, c
+
+    ; Config ADC
+    CALL ADC_Init
+
+    ; Config displays
+    CALL ConfigurarDisplays
 
     ; Limpiar banderas y permisos
     CLRF INTCON, c
@@ -124,12 +165,27 @@ Inicio:
     ; Habilitar INT2
     BSF INTCON3, 4, c
 
+    ; Configurar Timer0
+    CALL Timer0_Init
+
+    ; Primera lectura ADC
+    BSF PedirADC, 0, c
+
     ; Habilitar interrupciones globales
     BSF INTCON, 7, c
 
 
 ; --- BUCLE PRINCIPAL
 Principal:
+
+    ; Revisar si se necesita una nueva lectura
+    BTFSC PedirADC, 0, c
+    CALL Leer_ADC
+
+    ; Revisar si se debe actualizar el display
+    BTFSC Actualizar, 0, c
+    CALL Preparar_Display
+
     GOTO Principal
     
 
@@ -158,11 +214,15 @@ ADC_Init:
 
 Leer_ADC:
 
+    ; Limpiar solicitud ADC
+    BCF PedirADC, 0, c
+
     ; Iniciar conversion
     BSF ADCON0, 1, c
 
 Esperar_ADC:
     ; Esperar mientras la conversion esta activa
+    ; Tiempo Espera conversion
     BTFSC ADCON0, 1, c
     GOTO Esperar_ADC
 
@@ -173,6 +233,13 @@ Esperar_ADC:
     ; Guardar parte baja del resultado
     MOVF ADRESL, W, c
     MOVWF ADC_L, c
+
+    ; Calcular temperaturas
+    CALL Calcular_Celsius
+    CALL Calcular_Fahrenheit
+
+    ; Actualizar display
+    BSF Actualizar, 0, c
 
     RETURN
 
@@ -261,46 +328,49 @@ Fin_Division:
     RETURN
     
 
-    ;Configuracion del Timer
-; Configurar Timer0
-MOVLW 00000011B
-MOVWF T0CON, c
+Timer0_Init:
 
-; Cargar valor inicial
-MOVLW 0xFF
-MOVWF TMR0H, c
+    ; Configurar Timer0
+    MOVLW 00000011B
+    MOVWF T0CON, c
 
-MOVLW 0x06
-MOVWF TMR0L, c
+    ; Cargar valor inicial
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
     
-; Contador para nueva lectura
-MOVLW 250
-MOVWF ContMuestra, c
+    ; Contador para nueva lectura
+    MOVLW 250
+    MOVWF ContMuestra, c
 
-; Limpiar solicitud ADC
-BCF PedirADC, 0, c
+    ; Limpiar solicitud ADC
+    BCF PedirADC, 0, c
 
-; Limpiar bandera Timer0
-BCF INTCON, 2, c
+    ; Limpiar bandera Timer0
+    BCF INTCON, 2, c
 
-; Habilitar interrupcion Timer0
-BSF INTCON, 5, c
+    ; Habilitar interrupcion Timer0
+    BSF INTCON, 5, c
 
-; Encender Timer0
-BSF T0CON, 7, c
+    ; Encender Timer0
+    BSF T0CON, 7, c
+
+    RETURN
 
 
 ; --- Visualizacion
 
 ConfigurarDisplays:
 
-    ; RA1 selecciona display de decenas
+    ; RA1 display de decenas
     BCF TRISA, 1, c
 
-    ; RC2 selecciona display de unidades
+    ; RC2 display de unidades
     BCF TRISC, 2, c
 
-    ; RD0-RD6 controlan segmentos a-g
+    ; RD0-RD6 segmentos a-g
     MOVLW 10000000B
     MOVWF TRISD, c
 
@@ -317,6 +387,7 @@ ConfigurarDisplays:
 
 ; --- Separar unidades y decenas
 Separar_Digitos:
+
     CLRF Decenas, c
 
     MOVF Valor, W, c
@@ -396,10 +467,10 @@ Tabla_7Seg:
 
 Preparar_Display:
     
-    ; Ya se va a actualizar el display
+    ; Actualizar el display
     BCF Actualizar, 0, c
 
-    ; Revisar si se muestra celsius o fahrenheit
+    ; Revisar si esta en celsius o farenheit
     BTFSC UnidadF, 0, c
     GOTO Mostrar_F
 
@@ -416,28 +487,10 @@ Mostrar_F:
 Guardar_Valor:
 
     MOVWF Valor, c
-    
+
     ; Separar decenas y unidades
-    CLRF Decenas, c
+    CALL Separar_Digitos
 
-    MOVF Valor, W, c
-    MOVWF Unidades, c
-
-BCD_Display:
-
-    MOVLW 10
-    SUBWF Unidades, W, c
-
-    BTFSS STATUS, 0, c
-    GOTO Fin_BCD_Display
-
-    MOVWF Unidades, c
-    INCF Decenas, F, c
-
-    GOTO BCD_Display
-  
-Fin_BCD_Display:
-    
     ; Obtener segmentos para decenas
     MOVF Decenas, W, c
     CALL Tabla_7Seg
@@ -463,7 +516,6 @@ Multiplexar:
     BTFSC Digito, 0, c
     GOTO Mostrar_Unidades
 
-
 Mostrar_Decenas:
 
     ; Cargar segmentos de decenas
@@ -486,37 +538,6 @@ Mostrar_Unidades:
     BSF LATC, 2, c
 
     RETURN
-    
-
-Revisar_Timer0:
-
-    ; Revisar bandera de Timer0
-    BTFSS INTCON, 2, c
-    GOTO Fin_ISR
-
-    ;Recargar timer0
-    MOVLW 0xFF
-    MOVWF TMR0H, c
-
-    MOVLW 0x06
-    MOVWF TMR0L, c
-
-    ; Limpiar bandera de Timer0
-    BCF INTCON, 2, c
-
-    ; Multiplexar displays
-    CALL Multiplexar
-
-    ; Contar tiempo para nueva muestra
-    DECFSZ ContMuestra, F, c
-    GOTO Fin_ISR
-    
-    ; Reiniciar contador
-    MOVLW 250
-    MOVWF ContMuestra, c
-
-    ; Pedir una nueva lectura
-    BSF PedirADC, 0, c
 
 
 END

@@ -10,6 +10,9 @@ Indice:      DS 1
 
 ConfigurarDisplays:
 
+    ; RA1 selecciona display de decenas
+    BCF TRISA, 1, c
+
     ; RC2 selecciona display de unidades
     BCF TRISC, 2, c
 
@@ -18,11 +21,12 @@ ConfigurarDisplays:
     MOVWF TRISD, c
 
     ; Apagar displays inicialmente
-    BCF TRISC, 1, c
+    BCF LATA, 1, c
     BCF LATC, 2, c
 
     CLRF Digito, c
     CLRF Decenas, c
+    CLRF Unidades, c
 
     RETURN
 

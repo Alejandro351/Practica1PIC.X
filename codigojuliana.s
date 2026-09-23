@@ -203,7 +203,9 @@ Revisar_Timer0:
 
     ; Revisar bandera de Timer0
     BTFSS INTCON, c
+    GOTO Fin_ISR
 
+    ;Recargar timer0
     MOVLW 0x06
     MOVWF TMR0L, c
 
@@ -220,3 +222,5 @@ Revisar_Timer0:
     MOVLW 100
     MOVWF ContMuestra, c
 
+    ; Pedir una nueva lectura
+    BSF PedirADC, 0, c

@@ -176,5 +176,5 @@ BCF INTCON, 2, c
 BSF INTCON, 5, c
 
 ; Encender Timer0
-BSF T0CON
+BSF T0CON, 7, c
 END

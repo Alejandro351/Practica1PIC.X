@@ -14,6 +14,8 @@ Resto: DS 1
 Cociente: DS 1
 ContMuestra: DS 1
 PedirADC: DS 1
+ContMuestra: DS 1
+PedirADC: DS 1
 
 ADC_Init:
 
@@ -177,4 +179,18 @@ BSF INTCON, 5, c
 
 ; Encender Timer0
 BSF T0CON, 7, c
+    
+Revisar_Timer0:
+
+    ; Revisar bandera de Timer0
+    BTFSS INTCON, 2, c
+    GOTO Fin_ISR
+
+    ; Recargar Timer0
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c   
+
 END

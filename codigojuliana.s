@@ -163,11 +163,12 @@ Fin_BCD:
     MOVWF SegUni, c
 
     RETURN
+    
 Multiplexar:
 
     ; Apagar ambos displays
-    BCF LATA, 1, a
-    BCF LATC, 2, a
+    BCF LATA, 1, c
+    BCF LATC, 2, c
 
     ; Cambiar de display
     BTG Digito, 0, c
@@ -179,16 +180,18 @@ Multiplexar:
 Mostrar_Decenas:
 
     ; Cargar segmentos de decenas
-    MOVWF SegDec, W, c
+    MOVF SegDec, W, c
     MOVWF LATD, c
 
     ; Encender display de decenas
     BSF LATA, 1, c
+    
+    RETURN
 
 Mostrar_Unidades:
 
     ; Cargar segmentos de unidades
-    MOVWF SegUni, W, c
+    MOVF SegUni, W, c
     MOVWF LATD, c
 
     ; Encender display de unidades

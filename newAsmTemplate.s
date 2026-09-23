@@ -9,14 +9,20 @@ CONFIG MCLRE  = ON
 CONFIG XINST  = OFF
 
 ; Variables 
+PSECT udata_acs
+
 UnidadF:       DS 1	
-PSECT udata_acs		
-Digito:      DS 1
-Valor:       DS 1
-Unidades:    DS 1
-SegDec:      DS 1
-SegUni:      DS 1
-Indice:      DS 1
+Digito:        DS 1
+Valor:         DS 1
+Decenas:       DS 1
+Unidades:      DS 1
+SegDec:        DS 1
+SegUni:        DS 1
+Indice:        DS 1
+ADC_H:         DS 1
+ADC_L:         DS 1 
+TempC:         DS 1
+
 
 ; Vector Reset
 PSECT resetVec, class=CODE, reloc=2
@@ -25,19 +31,13 @@ GOTO Inicio
 
 ; Vector interrupcion
 PSECT intVec, class=CODE, reloc=2
-
 ORG 0x0008
 GOTO ISR
-
-
 
 ; Codigo Principal
 PSECT main_code, class=CODE, reloc=2
 
-
-
 ; Interrupciones externas
-
 ISR:
     ; Revisar INT0
     BTFSS INTCON, 1, c
@@ -74,6 +74,7 @@ Revisar_INT2:
 Fin_ISR:
     RETFIE 1
     
+
 ; Config Inicial
 
 Inicio:
@@ -119,19 +120,22 @@ Inicio:
     ; Habilitar interrupciones globales
     BSF INTCON, 7, c
 
+
 ; --- BUCLE PRINCIPAL
 Principal:
     GOTO Principal
     
+
 ; --- ADC
 GLOBAL ADC_Init
 PSECT adc_code, class=CODE, reloc=2
 
 ADC_Init:
+
     ; RA0/AN0 como entrada
     BSF TRISA, 0, c
 
-    ; AN0 analogico
+    ; AN0 analogico es
     MOVLW 00001110B
     MOVWF ADCON1, c
 
@@ -145,13 +149,60 @@ ADC_Init:
 
     RETURN
 
+Leer_ADC:
+
+    ; Iniciar conversion
+    BSF ADCON0, 1, c
+
+Esperar_ADC:
+    ; Esperar mientras la conversion esta activa
+    BTFSC ADCON0, 1, c
+    GOTO Esperar_ADC
+
+    ; Guardar parte alta del resultado
+    MOVF ADRESH, W, c
+    MOVWF ADC_H, c
+
+    ; Guardar parte baja del resultado
+    MOVF ADRESL, W, c
+    MOVWF ADC_L, c
+
+    RETURN
+
+Calcular_Celsius:
+    ; Parte alta del ADC por 2
+    MOVF ADC_H, W, c
+    ADDWF ADC_H, W, c
+    MOVWF TempC, c
+
+    ; Tener en cuenta el siguiente bit del ADC
+    BTFSC ADC_L, 7, c
+    INCF TempC, F, c
+
+    ; Limitar la temperatura a 99
+    MOVLW 100
+    SUBWF TempC, W, c
+
+    BTFSS STATUS, 0, c
+    GOTO Fin_Celsius
+
+    MOVLW 99
+    MOVWF TempC, c
+
+
+Fin_Celsius:
+
+    RETURN
+
+
 ; --- Visualizacion
 
 ConfigurarDisplays:
-    ; RA1 display de decenas
+
+    ; RA1 selecciona display de decenas
     BCF TRISA, 1, c
 
-    ; RC2 display de unidades
+    ; RC2 selecciona display de unidades
     BCF TRISC, 2, c
 
     ; RD0-RD6 controlan segmentos a-g
@@ -168,11 +219,83 @@ ConfigurarDisplays:
 
     RETURN
 
-; --- Separar unidades y decenas
 
+; --- Separar unidades y decenas
 Separar_Digitos:
     CLRF Decenas, c
+
     MOVF Valor, W, c
     MOVWF Unidades, c
-    
+
 BCD:
+    MOVLM 10
+    SUBWF Unidades, W, c
+    
+    BTFSS STATUS, 0, c
+    GOTO Fin_BCD
+    
+    MOVWF Unidades, c
+    INCF Decenas, F, c
+
+    GOTO BCD
+
+Fin_BCD:
+    
+
+Tabla_7Seg:
+    MOVWF Indice, c
+
+    MOVF Indice, W, c
+    XORLW 0
+    BTFSC STATUS, 2, c
+    RETLW 0x3F
+
+    MOVF Indice, W, c
+    XORLW 1
+    BTFSC STATUS, 2, c
+    RETLW 0x06
+
+    MOVF Indice, W, c
+    XORLW 2
+    BTFSC STATUS, 2, c
+    RETLW 0x5B
+
+    MOVF Indice, W, c
+    XORLW 3
+    BTFSC STATUS, 2, c
+    RETLW 0x4F
+
+    MOVF Indice, W, c
+    XORLW 4
+    BTFSC STATUS, 2, c
+    RETLW 0x66
+
+    MOVF Indice, W, c
+    XORLW 5
+    BTFSC STATUS, 2, c
+    RETLW 0x6D
+
+    MOVF Indice, W, c
+    XORLW 6
+    BTFSC STATUS, 2, c
+    RETLW 0x7D
+
+    MOVF Indice, W, c
+    XORLW 7
+    BTFSC STATUS, 2, c
+    RETLW 0x07
+
+    MOVF Indice, W, c
+    XORLW 8
+    BTFSC STATUS, 2, c
+    RETLW 0x7F
+
+    MOVF Indice, W, c
+    XORLW 9
+    BTFSC STATUS, 2, c
+    RETLW 0x6F
+
+    RETLW 0x00
+
+
+END

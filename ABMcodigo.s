@@ -6,7 +6,8 @@ PSECT adc_code, class=CODE, reloc=2
 PSECT udata_acs
 
 ADC_H: DS 1
-ADC_L: DS 1
+ADC_L: DS 1 
+TempC: DS 1
 
 ADC_Init:
 
@@ -59,5 +60,30 @@ Esperar_ADC:
 
     RETURN
 
+    Calcular_Celsius:
+
+    ; Parte alta del ADC por 2
+    MOVF ADC_H, W, c
+    ADDWF ADC_H, W, c
+    MOVWF TempC, c
+
+    ; Tener en cuenta el siguiente bit del ADC
+    BTFSC ADC_L, 7, c
+    INCF TempC, F, c
+
+    ; Limitar la temperatura a 99
+    MOVLW 100
+    SUBWF TempC, W, c
+
+    BTFSS STATUS, 0, c
+    GOTO Fin_Celsius
+
+    MOVLW 99
+    MOVWF TempC, c
+
+
+Fin_Celsius:
+
+    RETURN
 
 END

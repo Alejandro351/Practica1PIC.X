@@ -2,6 +2,7 @@ PSECT udata_acs
 
 Digito:      DS 1
 Valor:       DS 1
+Decenas:     DS 1
 Unidades:    DS 1
 SegDec:      DS 1
 SegUni:      DS 1
@@ -51,6 +52,8 @@ BCD:
     GOTO BCD
 
 Fin_BCD:
+    
+    RETURN
     
 Tabla_7Seg:
 
@@ -199,7 +202,7 @@ Revisar_Timer0:
     ; Multiplexar displays
     CALL Multiplexar
 
-    ; Contar tiempo para nueva muestra
+    ; Contar tiempo para nueva muestraaa
     DECFSZ ContMuestra, F, c
     GOTO Fin_ISR
     
@@ -209,3 +212,9 @@ Revisar_Timer0:
 
     ; Pedir una nueva lectura
     BSF PedirADC, 0, c
+    
+    GOTO Fin_ISR
+    
+Fin_ISR
+    
+  RETFIE 1

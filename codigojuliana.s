@@ -139,13 +139,27 @@ Guardar_Valor:
 
 BCD:
 
+    MOVLW 10
     SUBWF Unidades, W, c
 
     BTFSS STATUS, 0, c
     GOTO Fin_BCD
 
+    MOVWF Unidades, c
     INCF Decenas, F, c
 
     GOTO BCD
   
+Fin_BCD:
+    
+        ; Obtener segmentos para decenas
+    MOVF Decenas, W, c
+    CALL Tabla_7Seg
+    MOVWF SegDec, c
 
+    ; Obtener segmentos para unidades
+    MOVF Unidades, W, c
+    CALL Tabla_7Seg
+    MOVWF SegUni, c
+
+    RETURN

@@ -7,7 +7,6 @@ SegDec:      DS 1
 SegUni:      DS 1
 Indice:      DS 1
 
-
 ConfigurarDisplays:
 
     ; RA1 selecciona display de decenas
@@ -30,4 +29,13 @@ ConfigurarDisplays:
 
     RETURN
 
+Separar_Digitos:
+
+    CLRF Decenas, c
+
+    MOVF Valor, W, c
+    MOVWF Unidades, c
+
+
+BCD:
 

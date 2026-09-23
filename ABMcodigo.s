@@ -12,7 +12,8 @@ TempF: DS 1
 Temp4: DS 1
 Resto: DS 1
 Cociente: DS 1
-
+ContMuestra: DS 1
+PedirADC: DS 1
 
 ADC_Init:
 
@@ -148,5 +149,14 @@ Fin_Division:
 
     RETURN
 
+; Configurar Timer0
+MOVLW 00000011B
+MOVWF T0CON, c
 
+; Cargar valor inicial
+MOVLW 0xFF
+MOVWF TMR0H, c
+
+MOVLW 0x06
+MOVWF TMR0L, c
 END

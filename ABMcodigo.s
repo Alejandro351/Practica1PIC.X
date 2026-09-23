@@ -23,7 +23,11 @@ ADC_Init:
     MOVLW 00010010B
     MOVWF ADCON2, c
 
-   
+   ; Seleccionar AN0
+    ; GO/DONE inicialmente en 0
+    ; Encender ADC
+    MOVLW 00000001B
+    MOVWF ADCON0, c
 
     RETURN
 

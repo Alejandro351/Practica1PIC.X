@@ -1,8 +1,5 @@
 #include <xc.inc>
 
-GLOBAL ADC_Init
-
-PSECT adc_code, class=CODE, reloc=2
 PSECT udata_acs
 
 ADC_H: DS 1
@@ -14,8 +11,7 @@ Resto: DS 1
 Cociente: DS 1
 ContMuestra: DS 1
 PedirADC: DS 1
-ContMuestra: DS 1
-PedirADC: DS 1
+
 
 ADC_Init:
 
@@ -43,10 +39,9 @@ ADC_Init:
 
     RETURN
 
-
-
    Leer_ADC:
-
+    ; Limpiar solicitud porque ya se va a leer
+    BCF PedirADC, 0, c
     ; Iniciar conversion
     BSF ADCON0, 1, c
 
@@ -65,6 +60,13 @@ Esperar_ADC:
     ; Guardar parte baja del resultado
     MOVF ADRESL, W, c
     MOVWF ADC_L, c
+    
+    ; Calcular ambas temperaturas
+    CALL Calcular_Celsius
+    CALL Calcular_Fahrenheit
+    
+     ; Avisar que hay un nuevo valor para mostrar
+    BSF Actualizar, 0, c
 
     RETURN
 
@@ -82,14 +84,17 @@ Esperar_ADC:
     ; Limitar la temperatura a 99
     MOVLW 100
     SUBWF TempC, W, c
+    
     ; Si es menor de 100, dejar el valor
     BTFSS STATUS, 0, c
     GOTO Fin_Celsius
+    
     ; Si es 100 o mayor, dejarlo en 99
     MOVLW 99
     MOVWF TempC, c
 
 Fin_Celsius:
+    
     RETURN
     
     Calcular_Fahrenheit:
@@ -103,6 +108,7 @@ Fin_Celsius:
     ; Limitar Fahrenheit a 99
     MOVLW 99
     MOVWF TempF, c
+    
     RETURN
     
     
@@ -113,7 +119,7 @@ Hacer_Fahrenheit:
     ADDWF TempC, W, c
     MOVWF Temp4, c
 
-    ; Temp4 = TempC por 4
+    ; Resto = TempC por 4
     MOVF Temp4, W, c
     ADDWF Temp4, W, c
     MOVWF Resto, c
@@ -138,6 +144,7 @@ Dividir_5:
     INCF Cociente, F, c
 
     GOTO Dividir_5
+    
 Fin_Division:
     
     ; TempF = TempC + Cociente
@@ -151,34 +158,36 @@ Fin_Division:
 
     RETURN
     
-    ;Configuracion del Timer
-; Configurar Timer0
-MOVLW 00000011B
-MOVWF T0CON, c
-
-; Cargar valor inicial
-MOVLW 0xFF
-MOVWF TMR0H, c
-
-MOVLW 0x06
-MOVWF TMR0L, c
+Timer0_Init:
     
-; Contador para nueva lectura
-MOVLW 250
-MOVWF ContMuestra, c
+    MOVLW 00000011B
+    MOVWF T0CON, c
 
-; Limpiar solicitud ADC
-BCF PedirADC, 0, c
+    ; Cargar valor inicial
+    MOVLW 0xFF
+    MOVWF TMR0H, c
+
+    MOVLW 0x06
+    MOVWF TMR0L, c
+    
+    ; Contador para nueva lectura
+    MOVLW 250
+    MOVWF ContMuestra, c
+
+    ; Limpiar solicitud ADC
+    BCF PedirADC, 0, c
     
     
-; Limpiar bandera Timer0
-BCF INTCON, 2, c
+    ; Limpiar bandera Timer0
+    BCF INTCON, 2, c
 
-; Habilitar interrupcion Timer0
-BSF INTCON, 5, c
+    ; Habilitar interrupcion Timer0
+    BSF INTCON, 5, c
 
-; Encender Timer0
-BSF T0CON, 7, c
+    ; Encender Timer0
+    BSF T0CON, 7, c
+    
+    RETURN
     
 Revisar_Timer0:
 
@@ -195,12 +204,22 @@ Revisar_Timer0:
     
     ; Limpiar bandera
     BCF INTCON, 2, c
+    
+     ; Actualizar multiplexacion de displays
+    CALL Multiplexar
 
     ; Contar interrupciones
     DECFSZ ContMuestra, F, c
     GOTO Fin_ISR
     
-    
+    ; Reiniciar contador
+    MOVLW 250
+    MOVWF ContMuestra, c
+
+    ; Pedir una nueva lectura del ADC
+    BSF PedirADC, 0, c
+
+    GOTO Fin_ISR
 
 
 END
